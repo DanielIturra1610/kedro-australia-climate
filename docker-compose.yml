@@ -1,0 +1,10 @@
+version: '3'
+services:
+  kedro:
+    build: .
+    container_name: kedro_australia_climate
+    volumes:
+      - .:/home/kedro  # Mount the current directory inside the container
+    ports:
+      - "8888:8888"   # Expose Jupyter on localhost:8888
+    tty: true
