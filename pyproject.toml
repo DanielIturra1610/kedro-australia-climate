@@ -1,0 +1,17 @@
+[tool.kedro]
+package_name = "australia_climate_analysis"
+project_name = "Australia Climate Analysis"
+kedro_init_version = "0.18.10"
+
+[tool.isort]
+profile = "black"
+
+[tool.pytest.ini_options]
+addopts = """
+--cov-report term-missing \
+--cov src/australia_climate_analysis -ra"""
+
+[tool.coverage.report]
+fail_under = 0
+show_missing = true
+exclude_lines = ["pragma: no cover", "raise NotImplementedError"]
