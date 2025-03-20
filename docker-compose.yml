@@ -4,7 +4,7 @@ services:
     build: .
     container_name: kedro_australia_climate
     volumes:
-      - .:/home/kedro  # Mount the current directory inside the container
+      - .:/home/kedro  # Monta el directorio actual en el contenedor
     ports:
-      - "8888:8888"   # Expose Jupyter on localhost:8888
+      - "8888:8888"   # Expone Jupyter en localhost:8888
     tty: true
