@@ -126,8 +126,6 @@ docs/_build/
 # PyBuilder
 target/
 
-# Jupyter Notebook
-.ipynb_checkpoints
 
 # IPython
 .ipython/profile_default/history.sqlite
@@ -157,3 +155,6 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+
+!notebooks/*.ipynb
+
