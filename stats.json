@@ -1,0 +1,1 @@
+{"weather_raw": {"rows": 142193, "columns": 24, "file_size": 14309520}, "weather_imputed_temp": {"rows": 142193, "columns": 24}, "weather_imputed_rain_today": {"rows": 142193, "columns": 24}, "weather_date_converted": {"rows": 142193, "columns": 24}, "weather_temporal_features": {"rows": 142193, "columns": 30}, "weather_with_rainfall_outliers": {"rows": 142193, "columns": 31}}

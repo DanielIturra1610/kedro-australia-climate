@@ -1,4 +1,82 @@
-# Here you can define all your data sets by using simple YAML syntax.
-#
-# Documentation for this file format can be found in "The Data Catalog"
-# Link: https://docs.kedro.org/en/stable/data/data_catalog.html
+# ─────────────────────────────────────────────
+# Datos originales sin procesar
+# ─────────────────────────────────────────────
+weather_raw:
+  type: pandas.CSVDataSet
+  filepath: data/01_raw/weatherAUS.csv
+
+# ─────────────────────────────────────────────
+# Datos intermedios de preprocesamiento
+# ─────────────────────────────────────────────
+weather_imputed_temp:
+  type: MemoryDataSet # Imputación de temperatura mínima y máxima
+
+weather_imputed_rain_today:
+  type: MemoryDataSet # Imputación de variable 'RainToday'
+
+weather_date_converted:
+  type: MemoryDataSet # Conversión de fecha a tipo datetime
+
+weather_temporal_features:
+  type: MemoryDataSet # Extracción de características como año, mes, estación
+
+weather_with_rainfall_outliers:
+  type: MemoryDataSet # Detección de outliers en lluvia
+
+# ─────────────────────────────────────────────
+# Dataset con características finales
+# ─────────────────────────────────────────────
+weather_data_with_features:
+  type: pandas.ParquetDataSet
+  filepath: data/04_feature/weather_data_with_features.parquet
+
+# ─────────────────────────────────────────────
+# Entradas y salidas para entrenamiento del modelo
+# ─────────────────────────────────────────────
+dataset_entrenado:
+  type: pandas.ParquetDataSet
+  filepath: data/05_model_input/dataset_entrenado.parquet
+
+modelo_clasificacion:
+  type: pickle.PickleDataSet
+  filepath: data/06_models/modelo_clasificacion.pkl
+
+# ─────────────────────────────────────────────
+# Inference: entrada y resultados del modelo
+# ─────────────────────────────────────────────
+datos_a_predecir:
+  type: pandas.ParquetDataSet
+  filepath: data/05_model_input/datos_a_predecir.parquet
+
+climate_inference_input:
+  type: pandas.ParquetDataSet
+  filepath: data/05_model_input/climate_inference_input.parquet
+
+climate_inference_output:
+  type: pandas.ParquetDataSet
+  filepath: data/08_reporting/climate_inference_output.parquet
+
+predicciones_riesgo_climatico:
+  type: pandas.ParquetDataSet
+  filepath: data/08_reporting/predicciones_riesgo_climatico.parquet
+
+predicciones_climaticas:
+  type: pandas.ParquetDataSet
+  filepath: data/08_reporting/predicciones_climaticas.parquet
+
+# ─────────────────────────────────────────────
+# Reporte de salida del proyecto
+# ─────────────────────────────────────────────
+climate_risk_predictions:
+  type: pandas.CSVDataSet
+  filepath: data/07_model_output/climate_risk_predictions.csv
+
+climate_risk_scores:
+  type: pandas.ParquetDataSet
+  filepath: data/07_model_output/climate_risk_scores.parquet
+
+climate_risk_summary:
+  type: pandas.ExcelDataSet
+  filepath: data/08_reporting/climate_risk_summary.xlsx
+  save_args:
+    sheet_name: RiskSummary

@@ -1,22 +1,31 @@
-# Usa una imagen ligera de Python como base
+# Usa una imagen ligera y moderna
 FROM python:3.10-slim
 
-# Establece un directorio de trabajo dentro del contenedor
+# Variables de entorno recomendadas
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
+
+# Establece directorio de trabajo
 WORKDIR /home/kedro
 
-# Instala las dependencias del sistema necesarias para Kedro o operaciones con Git
-RUN apt-get update && \
-    apt-get install -y git && \
-    rm -rf /var/lib/apt/lists/*
+# Instala dependencias del sistema necesarias
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
 
-# Copia el archivo requirements.txt desde el host al contenedor
-COPY src/requirements.txt /home/kedro/requirements.txt
+# Copia requerimientos y los instala
+COPY src/requirements.txt requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Instala las dependencias desde el archivo requirements.txt
-RUN pip install --no-cache-dir -r /home/kedro/requirements.txt
+# Instala Kedro, Jupyter y Kedro Viz
+RUN pip install kedro==0.18.10 jupyterlab kedro-viz
 
-# Instala Kedro y Jupyter
-RUN pip install kedro==0.18.10 jupyter
+# Copia el contenido completo del proyecto
+COPY . .
 
-# Por defecto, inicia una sesión bash
-CMD ["/bin/bash"]
+# Exposición del puerto de Jupyter
+EXPOSE 8888
+
+# Comando por defecto
+CMD ["jupyter", "lab", "--ip=0.0.0.0", "--port=8888", "--no-browser", "--allow-root"]

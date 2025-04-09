@@ -1,10 +1,16 @@
-version: '3'
+version: '3.8'
+
 services:
   kedro:
     build: .
     container_name: kedro_australia_climate
     volumes:
-      - .:/home/kedro  # Monta el directorio actual en el contenedor
+      - .:/home/kedro
     ports:
-      - "8888:8888"   # Expone Jupyter en localhost:8888
+      - "8888:8888"  # JupyterLab
+      - "4141:4141"  # Kedro Viz
     tty: true
+    stdin_open: true
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTHONDONTWRITEBYTECODE=1
