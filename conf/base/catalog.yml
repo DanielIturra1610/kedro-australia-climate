@@ -21,7 +21,8 @@ weather_temporal_features:
   type: MemoryDataSet # Extracción de características como año, mes, estación
 
 weather_with_rainfall_outliers:
-  type: MemoryDataSet # Detección de outliers en lluvia
+  type: pandas.ParquetDataSet
+  filepath: data/02_intermediate/weather_with_rainfall_outliers.parquet
 
 # ─────────────────────────────────────────────
 # Dataset con características finales
@@ -80,3 +81,53 @@ climate_risk_summary:
   filepath: data/08_reporting/climate_risk_summary.xlsx
   save_args:
     sheet_name: RiskSummary
+
+climate_risk_index:
+  type: pandas.CSVDataSet
+  filepath: data/08_reporting/climate_risk_index.csv
+  save_args:
+    index: False
+
+# ─────────────────────────────────────────────
+# Modelo de Regresión: Entrenamiento y Evaluación
+# ─────────────────────────────────────────────
+X_train:
+  type: pandas.ParquetDataSet
+  filepath: data/05_model_input/X_train.parquet
+
+X_test:
+  type: pandas.ParquetDataSet
+  filepath: data/05_model_input/X_test.parquet
+
+y_train:
+  type: pandas.ParquetDataSet
+  filepath: data/05_model_input/y_train.parquet
+
+y_test:
+  type: pandas.ParquetDataSet
+  filepath: data/05_model_input/y_test.parquet
+
+regression_model:
+  type: pickle.PickleDataSet
+  filepath: data/06_models/regression_model.pkl
+
+regression_model_metrics:
+  type: json.JSONDataSet
+  filepath: data/08_reporting/regression_model_metrics.json
+
+# ─────────────────────────────────────────────
+# Resultados del modelo de regresión
+# ─────────────────────────────────────────────
+regression_model_metrics_pg:
+  type: pandas.SQLTableDataSet
+  table_name: regression_model_metrics
+  credentials: postgres_creds
+  save_args:
+    if_exists: replace
+    index: False
+
+regression_metrics_report:
+  type: pandas.ExcelDataSet
+  filepath: data/08_reporting/regression_metrics_report.xlsx
+  save_args:
+    sheet_name: RegressionMetrics

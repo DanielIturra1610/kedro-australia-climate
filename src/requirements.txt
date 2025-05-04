@@ -20,3 +20,5 @@ postgres
 kedro-datasets
 pyarrow
 openpyxl
+psycopg2-binary
+SQLAlchemy

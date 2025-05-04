@@ -8,6 +8,7 @@ from .nodes import (
     train_climate_risk_classifier,
     predecir_riesgo_climatico
 )
+from .nodes import calcular_indice_riesgo_climatico
 from .inferencia_modelo import inferir_riesgo_climatico
 from .nodes import preparar_climate_inference_input
 from australia_climate_analysis.pipelines.climate_risk.nodes import infer_climate_risk
@@ -15,7 +16,6 @@ from australia_climate_analysis.pipelines.climate_risk.nodes import infer_climat
 
 def create_pipeline(**kwargs) -> Pipeline:
     return pipeline([
-
         # ────────────────────────
         # PREPROCESAMIENTO
         # ────────────────────────
@@ -85,5 +85,11 @@ def create_inference_pipeline(**kwargs) -> Pipeline:
             inputs=["modelo_clasificacion", "climate_inference_input"],
             outputs="climate_inference_output",
             name="inferir_riesgo_climatico_node"
+        ),
+        node(
+            func=calcular_indice_riesgo_climatico,
+            inputs="predicciones_climaticas",
+            outputs="climate_risk_index",
+            name="calcular_indice_riesgo_climatico_node"
         )
     ])

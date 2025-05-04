@@ -1,10 +1,12 @@
 import pandas as pd
 import numpy as np
 import logging
+import joblib   
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report
-import joblib
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.metrics import mean_squared_error
 
 logger = logging.getLogger(__name__)
 
@@ -174,3 +176,82 @@ def preparar_climate_inference_input(df: pd.DataFrame) -> pd.DataFrame:
 
     logger.info("[INFERENCIA] Dataset listo para inferencia con shape: %s", df.shape)
     return df
+
+
+def calcular_indice_riesgo_climatico(df: pd.DataFrame) -> pd.DataFrame:
+    """Calcula el índice de riesgo climático por ciudad.
+
+    Args:
+        df (pd.DataFrame): DataFrame con las predicciones climáticas. 
+                           Debe incluir columnas de location dummies y 'PredictedRainTomorrow'.
+
+    Returns:
+        pd.DataFrame: Índice de riesgo por ciudad.
+    """
+    location_cols = [col for col in df.columns if col.startswith("Location_")]
+
+    # Transformamos dummies a nombres de ciudad
+    melted = df[location_cols + ["PredictedRainTomorrow"]].copy()
+    melted = melted.melt(id_vars="PredictedRainTomorrow", var_name="City", value_name="is_city")
+    melted = melted[melted["is_city"] == True].drop(columns="is_city")
+
+    # Extraemos nombre limpio de la ciudad
+    melted["City"] = melted["City"].str.replace("Location_", "")
+
+    # Cálculo del índice de riesgo
+    risk_index = (
+        melted.groupby("City")["PredictedRainTomorrow"]
+        .mean()
+        .reset_index()
+        .rename(columns={"PredictedRainTomorrow": "ClimateRiskIndex"})
+    )
+
+    return risk_index
+
+def train_regression_model(df: pd.DataFrame, params: dict) -> tuple:
+    """Entrena un modelo de regresión basado en las características entregadas.
+
+    Args:
+        df: DataFrame de entrada con características y variable objetivo.
+        params: Diccionario de parámetros definidos en parameters.yml.
+
+    Returns:
+        Tuple: (modelo entrenado, métricas del modelo en DataFrame)
+    """
+    # Definimos variables predictoras y target
+    features = df.drop(columns=["Rainfall"])
+    target = df["Rainfall"]
+
+    X_train, X_test, y_train, y_test = train_test_split(
+        features, target, test_size=0.2, random_state=params["random_state"]
+    )
+
+    # Inicializar el modelo de regresión
+    if params["model_type"] == "RandomForestRegressor":
+        model = RandomForestRegressor(
+            n_estimators=params["n_estimators"],
+            max_depth=params["max_depth"],
+            random_state=params["random_state"],
+            n_jobs=params["n_jobs"]
+        )
+    else:
+        raise ValueError(f"Modelo de regresión {params['model_type']} no soportado todavía.")
+
+    # Entrenar modelo
+    model.fit(X_train, y_train)
+
+    # Evaluar modelo
+    y_pred = model.predict(X_test)
+    mse = mean_squared_error(y_test, y_pred)
+    rmse = mse ** 0.5
+
+    metrics = pd.DataFrame({
+        "mse": [mse],
+        "rmse": [rmse],
+    })
+
+    return model, metrics
+
+def save_model(model, output_path: str) -> None:
+    """Guarda el modelo entrenado en un archivo .pkl."""
+    joblib.dump(model, output_path)

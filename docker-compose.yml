@@ -14,3 +14,18 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
       - PYTHONDONTWRITEBYTECODE=1
+
+  postgres:
+    image: postgres:14
+    container_name: postgres_aus_climate
+    environment:
+      POSTGRES_USER: kedro_user
+      POSTGRES_PASSWORD: kedro_pass
+      POSTGRES_DB: climate_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:
