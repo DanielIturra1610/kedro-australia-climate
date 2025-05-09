@@ -89,7 +89,7 @@ climate_risk_index:
     index: False
 
 # ─────────────────────────────────────────────
-# Modelo de Regresión: Entrenamiento y Evaluación
+# Modelo de Regresión Lineal: Entrenamiento y Evaluación
 # ─────────────────────────────────────────────
 X_train:
   type: pandas.ParquetDataSet
@@ -116,18 +116,71 @@ regression_model_metrics:
   filepath: data/08_reporting/regression_model_metrics.json
 
 # ─────────────────────────────────────────────
-# Resultados del modelo de regresión
+# Resultados del Modelo de Regresión Lineal
 # ─────────────────────────────────────────────
-regression_model_metrics_pg:
-  type: pandas.SQLTableDataSet
-  table_name: regression_model_metrics
-  credentials: postgres_creds
-  save_args:
-    if_exists: replace
-    index: False
 
 regression_metrics_report:
   type: pandas.ExcelDataSet
   filepath: data/08_reporting/regression_metrics_report.xlsx
   save_args:
     sheet_name: RegressionMetrics
+
+# ─────────────────────────────────────────────
+# Modelo de Regresión: Árbol de decisión
+# ─────────────────────────────────────────────
+tree_model:
+  type: pickle.PickleDataSet
+  filepath: data/06_models/tree_model.pkl
+  versioned: true
+
+tree_model_metrics:
+  type: json.JSONDataSet
+  filepath: data/08_reporting/tree_model_metrics.json
+  versioned: true
+
+# ─────────────────────────────────────────────
+#  UTILITIES ─ identificador de ejecución
+# ─────────────────────────────────────────────
+metadata_runs:
+  type: kedro_datasets.pandas.SQLTableDataSet
+  table_name: metadata.runs
+  credentials: postgres_creds
+  save_args:
+    if_exists: append
+
+#  ➜   Variable en memoria que viaja entre nodos
+run_id:
+  type: MemoryDataSet
+# ─────────────────────────────────────────────
+#  MÉTRICAS DE REGRESIÓN  (formato largo)
+# ─────────────────────────────────────────────
+regression_metrics_pg:
+  type: kedro_datasets.pandas.SQLTableDataSet
+  table_name: ml_metrics.regression
+  credentials: postgres_creds
+  save_args:
+    if_exists: append
+# ─────────────────────────────────────────────
+#  MÉTRICAS DE CLASIFICACIÓN  (formato largo)
+# ─────────────────────────────────────────────
+classification_metrics_pg:
+  type: kedro_datasets.pandas.SQLTableDataSet
+  table_name: ml_metrics.classification
+  credentials: postgres_creds
+  save_args:
+    if_exists: append
+# ─────────────────────────────────────────────
+#  ÍNDICE DE RIESGO CLIMÁTICO POR CIUDAD
+# ─────────────────────────────────────────────
+risk_index_pg:
+  type: kedro_datasets.pandas.SQLTableDataSet
+  table_name: climate_risk # ← sin esquema
+  credentials: postgres_creds
+  save_args:
+    if_exists: append
+# ─────────────────────────────────────────────
+#  MÉTRICAS DE CLASIFICACIÓN – artefacto local
+# ─────────────────────────────────────────────
+classification_metrics_local:
+  type: json.JSONDataSet # o MemoryDataSet si no lo quieres persistir
+  filepath: data/08_reporting/classification_model_metrics.json

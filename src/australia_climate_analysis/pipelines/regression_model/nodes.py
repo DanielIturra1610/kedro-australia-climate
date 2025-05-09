@@ -51,25 +51,35 @@ def train_regression_model(X_train: pd.DataFrame, y_train: pd.Series):
     model.fit(X_train, y_train)
     return model
 
-def evaluate_regression_model(model, X_test: pd.DataFrame, y_test: pd.DataFrame):
-    """Evalúa el modelo entrenado y genera métricas."""
-    predictions = model.predict(X_test)
-    mse = mean_squared_error(y_test, predictions)
-    r2 = r2_score(y_test, predictions)
+def evaluate_regression_model(model, X_test, y_test, run_id: str):
+    import pandas as pd
+    from sklearn.metrics import mean_squared_error, r2_score
 
-    metrics_dict = {
-        "mse": mse,
-        "r2_score": r2
+    y_pred = model.predict(X_test)
+    metrics = {
+        "mse":  mean_squared_error(y_test, y_pred),
+        "r2":   r2_score(y_test, y_pred),
     }
 
-    # 🕓 Agregar timestamp
-    metrics_df = pd.DataFrame([metrics_dict])
-    metrics_df["timestamp"] = datetime.datetime.now().isoformat()
-
-    return {
-        "regression_model_metrics": metrics_dict,
-        "regression_model_metrics_pg": metrics_df
+    # ――― JSON plano para artefacto local ----------
+    metrics_json = {
+        "model_name": type(model).__name__,
+        **metrics
     }
+
+    # ――― Formato “largo” para la tabla ------------
+    metrics_long = pd.DataFrame([
+        {
+            "run_id": run_id,
+            "model_name": type(model).__name__,
+            "metric": k,
+            "value": v,
+        }
+        for k, v in metrics.items()
+    ])
+
+    return metrics_json, metrics_long
+
 
 def save_model(model) -> None:
     """Guarda el modelo entrenado."""

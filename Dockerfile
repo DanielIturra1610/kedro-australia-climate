@@ -1,31 +1,35 @@
-# Usa una imagen ligera y moderna
+# ───────── 1. Imagen base ─────────
 FROM python:3.10-slim
 
-# Variables de entorno recomendadas
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
 
-# Establece directorio de trabajo
 WORKDIR /home/kedro
 
-# Instala dependencias del sistema necesarias
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    git \
-    build-essential \
-    && rm -rf /var/lib/apt/lists/*
+# ───────── 2. Paquetes de sistema (con reintento) ─────────
+RUN set -eux; \
+    # primer intento
+    apt-get update && \
+    apt-get -o Acquire::Retries=3 install -y --no-install-recommends \
+    git build-essential && \
+    rm -rf /var/lib/apt/lists/* \
+    # si falla, segundo intento tras 20 s
+    || ( \
+    echo "⏳ 1er intento falló; reintento en 20 s…" && \
+    sleep 20 && \
+    apt-get update --fix-missing && \
+    apt-get -o Acquire::Retries=5 install -y --no-install-recommends \
+    git build-essential && \
+    rm -rf /var/lib/apt/lists/* )
 
-# Copia requerimientos y los instala
+# ───────── 3. Dependencias Python ─────────
 COPY src/requirements.txt requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Instala Kedro, Jupyter y Kedro Viz
-RUN pip install kedro==0.18.10 jupyterlab kedro-viz
-
-# Copia el contenido completo del proyecto
+# ───────── 4. Copia del proyecto ─────────
 COPY . .
 
-# Exposición del puerto de Jupyter
+# ───────── 5. Exponer Jupyter (opcional) ─────────
 EXPOSE 8888
 
-# Comando por defecto
 CMD ["jupyter", "lab", "--ip=0.0.0.0", "--port=8888", "--no-browser", "--allow-root"]

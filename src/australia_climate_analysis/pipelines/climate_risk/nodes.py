@@ -7,6 +7,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_squared_error
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 
 logger = logging.getLogger(__name__)
 
@@ -129,7 +130,40 @@ def train_climate_risk_classifier(df):
     # Guardar modelo entrenado para predicción futura
     joblib.dump(clf, "data/06_models/climate_risk_classifier.pkl")
 
-    return clf, pd.DataFrame({"predictions": y_pred.tolist()})
+    return clf, X_test, y_test
+
+# ---------- EVALUACIÓN CLASIFICACIÓN ----------
+def evaluate_climate_classifier(model, X_test, y_test, run_id: str):
+    """
+    Devuelve dos objetos:
+      • metrics_json  → para el artefacto local (facultativo)
+      • metrics_long → para la tabla ml_metrics.classification
+    """
+    y_pred = model.predict(X_test)
+
+    metrics = {
+        "accuracy":  accuracy_score(y_test, y_pred),
+        "precision": precision_score(y_test, y_pred),
+        "recall":    recall_score(y_test, y_pred),
+        "f1":        f1_score(y_test, y_pred),
+    }
+
+    # ─ JSON plano (si quieres seguir guardándolo en un .json local)
+    metrics_json = {"model_name": type(model).__name__, **metrics}
+
+    # ─ Formato largo para PostgreSQL
+    metrics_long = pd.DataFrame([
+        {
+            "run_id":    run_id,
+            "model_name": type(model).__name__,
+            "metric":    k,
+            "value":     v,
+        }
+        for k, v in metrics.items()
+    ])
+
+    return metrics_json, metrics_long
+
 
 
 def infer_climate_risk(modelo, df: pd.DataFrame) -> pd.DataFrame:
@@ -178,35 +212,45 @@ def preparar_climate_inference_input(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def calcular_indice_riesgo_climatico(df: pd.DataFrame) -> pd.DataFrame:
-    """Calcula el índice de riesgo climático por ciudad.
-
-    Args:
-        df (pd.DataFrame): DataFrame con las predicciones climáticas. 
-                           Debe incluir columnas de location dummies y 'PredictedRainTomorrow'.
-
-    Returns:
-        pd.DataFrame: Índice de riesgo por ciudad.
+def calcular_indice_riesgo_climatico(df: pd.DataFrame, run_id: str) -> pd.DataFrame:
     """
-    location_cols = [col for col in df.columns if col.startswith("Location_")]
+    Devuelve un DataFrame con columnas:
+      • run_id
+      • city
+      • climate_risk_index
+    listo para guardarse en la tabla public.climate_risk
+    """
+    # ① localizar las dummies de ciudad
+    location_cols = [c for c in df.columns if c.startswith("Location_")]
 
-    # Transformamos dummies a nombres de ciudad
-    melted = df[location_cols + ["PredictedRainTomorrow"]].copy()
-    melted = melted.melt(id_vars="PredictedRainTomorrow", var_name="City", value_name="is_city")
-    melted = melted[melted["is_city"] == True].drop(columns="is_city")
-
-    # Extraemos nombre limpio de la ciudad
-    melted["City"] = melted["City"].str.replace("Location_", "")
-
-    # Cálculo del índice de riesgo
-    risk_index = (
-        melted.groupby("City")["PredictedRainTomorrow"]
-        .mean()
-        .reset_index()
-        .rename(columns={"PredictedRainTomorrow": "ClimateRiskIndex"})
+    melted = (
+        df[location_cols + ["PredictedRainTomorrow"]]
+        .melt(id_vars="PredictedRainTomorrow",
+              var_name="city_dummy",
+              value_name="is_city")
+        .query("is_city == 1")          # sólo la fila de la ciudad verdadera
+        .drop(columns="is_city")
     )
 
-    return risk_index
+    # ② nombre limpio de la ciudad
+    melted["city"] = melted["city_dummy"].str.replace("Location_", "")
+    melted = melted.drop(columns="city_dummy")
+
+    # ③ índice de riesgo
+    risk_index = (
+        melted
+        .groupby("city")["PredictedRainTomorrow"]
+        .mean()
+        .rename("climate_risk_index")
+        .reset_index()
+    )
+
+    # ④ añade el run_id (para trazabilidad)
+    risk_index["run_id"] = run_id
+
+    # columnas en el orden que tiene la tabla
+    return risk_index[["run_id", "city", "climate_risk_index"]]
+
 
 def train_regression_model(df: pd.DataFrame, params: dict) -> tuple:
     """Entrena un modelo de regresión basado en las características entregadas.
