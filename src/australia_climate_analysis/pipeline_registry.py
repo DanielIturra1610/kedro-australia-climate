@@ -5,30 +5,39 @@ from australia_climate_analysis.pipelines.regression_model import pipeline as li
 from australia_climate_analysis.pipelines.regression_tree import pipeline as tree_pl
 from australia_climate_analysis.pipelines.regression_svm.pipeline import create_pipeline as svm_pipeline_pl  # Pipeline de SVM
 from australia_climate_analysis.pipelines.regression_random_forest.pipeline import create_pipeline as random_forest_pipeline_pl  # Pipeline de Random Forest
+from australia_climate_analysis.pipelines.modelo_regresion_multiple.pipeline import create_pipeline as multiple_regression_pipeline_pl  # Pipeline de Regresión Múltiple
+from australia_climate_analysis.pipelines.data_engineering.pipeline import create_pipeline as data_engineering_pipeline_pl  # Pipeline de Ingeniería de Datos
 
 def register_pipelines() -> dict[str, Pipeline]:
     # Los pipelines previos
     climate_risk = climate_risk_pl.create_pipeline()
     inference = climate_risk_pl.create_inference_pipeline()
+    
+    # Pipeline de ingeniería de datos
+    data_engineering = data_engineering_pipeline_pl()
 
     # Los pipelines de regresión
     regression_linear = linear_pl.create_pipeline()  # Pipeline de regresión lineal
     regression_tree = tree_pl.create_pipeline()  # Pipeline árbol de decisión
     regression_svm = svm_pipeline_pl()  # Pipeline de SVM
     regression_random_forest = random_forest_pipeline_pl()  # Pipeline de Random Forest
+    regression_multiple = multiple_regression_pipeline_pl()  # Pipeline de Regresión Múltiple
 
     # Se crea el pipeline completo
     full_pipeline = pipeline(
-        climate_risk + regression_linear + regression_tree + regression_svm + regression_random_forest  # Se combinan todos los pipelines sin duplicados
+        data_engineering + climate_risk + regression_linear + regression_tree + regression_svm + regression_random_forest + regression_multiple  # Se combinan todos los pipelines sin duplicados
     )
 
     return {
         "climate_risk": climate_risk,
         "inference": inference,
+        "data_engineering": data_engineering,  # Pipeline ingeniería de datos
         "regression_model": regression_linear,  # Pipeline regresión lineal
         "regression_tree": regression_tree,  # Pipeline árbol de decisión
         "regression_svm": regression_svm,  # Pipeline SVM
         "regression_random_forest": regression_random_forest,  # Pipeline Random Forest
+        "regression_multiple": regression_multiple,  # Pipeline Regresión Múltiple
+        "modelo_regresion_multiple": regression_multiple,  # Alias para el mismo pipeline
         "__default__": full_pipeline,  # Pipeline completo
     }
 

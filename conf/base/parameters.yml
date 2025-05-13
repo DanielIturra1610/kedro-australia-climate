@@ -12,3 +12,6 @@ regression_model_params:
 test_size: 0.2 # 20% para test
 random_state: 42 # Para reproducibilidad
 
+# Identificador único para esta ejecución
+run_id: "run_001" # Identificador de ejecución para tracking
+

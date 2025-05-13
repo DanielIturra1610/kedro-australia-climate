@@ -39,7 +39,7 @@ def create_pipeline(**kwargs) -> Pipeline:
             func=convertir_fecha,
             inputs="df_imputado_cat",
             outputs="df_fecha",
-            name="convertir_fecha_node"
+            name="convertir_fecha_data_eng_node"
         ),
         node(
             func=outliers_rainfall,

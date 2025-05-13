@@ -1,0 +1,32 @@
+# ─────────────────────────────────────────────
+# Catálogo para el pipeline de data_engineering
+# ─────────────────────────────────────────────
+
+# Datos de entrada
+raw_weather_data:
+  type: pandas.CSVDataSet
+  filepath: data/01_raw/weatherAUS.csv
+
+# Datasets intermedios
+df_cargado:
+  type: MemoryDataSet
+
+df_nulos:
+  type: MemoryDataSet
+
+df_imputado_num:
+  type: MemoryDataSet
+
+df_imputado_cat:
+  type: MemoryDataSet
+
+df_fecha:
+  type: MemoryDataSet
+
+df_outliers:
+  type: MemoryDataSet
+
+# Dataset final procesado
+df_final:
+  type: pandas.ParquetDataSet
+  filepath: data/04_feature/weather_data_with_features.parquet

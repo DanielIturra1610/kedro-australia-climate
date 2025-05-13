@@ -190,10 +190,10 @@ classification_metrics_local:
 # Modelo Random Forest
 random_forest_metrics_pg:
   type: kedro_datasets.pandas.SQLTableDataSet
-  table_name: ml_metrics.regression  # Verifica el nombre de la tabla
+  table_name: ml_metrics.regression
   credentials: postgres_creds
   save_args:
-    if_exists: append  # Verifica que la opción sea correcta, por ejemplo, append si quieres agregar a los datos existentes
+    if_exists: append
 
 
 random_forest_model:
@@ -204,6 +204,22 @@ random_forest_metrics_json:
   type: json.JSONDataSet
   filepath: data/08_reporting/random_forest_metrics.json
 
+# Modelo de Regresión Múltiple
+multiple_regression_model:
+  type: pickle.PickleDataSet
+  filepath: data/06_models/multiple_regression_model.pkl
+
+multiple_regression_metrics_json:
+  type: json.JSONDataSet
+  filepath: data/08_reporting/multiple_regression_metrics.json
+
+multiple_regression_metrics_pg:
+  type: kedro_datasets.pandas.SQLTableDataSet
+  table_name: ml_metrics.regression
+  credentials: postgres_creds
+  save_args:
+    if_exists: append
+
 # Modelo SVM
 svm_model:
   type: pickle.PickleDataSet
@@ -212,3 +228,10 @@ svm_model:
 svm_metrics_json:
   type: json.JSONDataSet
   filepath: data/08_reporting/svm_metrics.json
+
+svm_metrics_pg:
+  type: kedro_datasets.pandas.SQLTableDataSet
+  table_name: ml_metrics.regression
+  credentials: postgres_creds
+  save_args:
+    if_exists: append
