@@ -184,3 +184,31 @@ risk_index_pg:
 classification_metrics_local:
   type: json.JSONDataSet # o MemoryDataSet si no lo quieres persistir
   filepath: data/08_reporting/classification_model_metrics.json
+
+# pipelines/catalog.yml
+
+# Modelo Random Forest
+random_forest_metrics_pg:
+  type: kedro_datasets.pandas.SQLTableDataSet
+  table_name: ml_metrics.regression  # Verifica el nombre de la tabla
+  credentials: postgres_creds
+  save_args:
+    if_exists: append  # Verifica que la opción sea correcta, por ejemplo, append si quieres agregar a los datos existentes
+
+
+random_forest_model:
+  type: pickle.PickleDataSet
+  filepath: data/06_models/random_forest_model.pkl
+
+random_forest_metrics_json:
+  type: json.JSONDataSet
+  filepath: data/08_reporting/random_forest_metrics.json
+
+# Modelo SVM
+svm_model:
+  type: pickle.PickleDataSet
+  filepath: data/06_models/svm_model.pkl
+
+svm_metrics_json:
+  type: json.JSONDataSet
+  filepath: data/08_reporting/svm_metrics.json

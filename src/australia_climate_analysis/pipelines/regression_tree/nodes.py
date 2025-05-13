@@ -22,7 +22,7 @@ def train_regression_model(X_train: pd.DataFrame, y_train: pd.Series):
     return model
 
 # ---------- EVALUACIÓN ----------
-def evaluate_regression_model(model, X_test, y_test, run_id: str):
+def evaluate_regression_model_tree(model, X_test, y_test, run_id: str):
     import pandas as pd
     from sklearn.metrics import mean_squared_error, r2_score
 

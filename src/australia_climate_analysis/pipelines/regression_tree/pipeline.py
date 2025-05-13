@@ -26,10 +26,10 @@ def create_pipeline(**kwargs) -> Pipeline:
             name="train_regression_tree_node",
         ),
         node(
-            func=nodes.evaluate_regression_model,
+            func=nodes.evaluate_regression_model_tree,
             inputs=["tree_model", "X_test", "y_test", "run_id"],
             outputs=["tree_metrics_local",          # (local/Memory)
-                     "regression_metrics_pg"],      # ✔ misma tabla
+                     "regression_metrics_pg_tree"],      # ✔ misma tabla
             name="evaluate_regression_tree_node",
         ),
     ])

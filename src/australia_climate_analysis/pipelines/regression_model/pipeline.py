@@ -37,6 +37,6 @@ def create_pipeline(**kwargs) -> Pipeline:
             inputs=["regression_model", "X_test", "y_test", "run_id"],
             outputs=["reg_metrics_local",          # (Memory / JSON local)
                      "regression_metrics_pg"],     # → tabla ml_metrics.regression
-            name="evaluate_regression_model_node",
+            name="evaluate_regression_model_node_simle",
         ),
     ])
