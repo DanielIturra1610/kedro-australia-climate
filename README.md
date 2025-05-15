@@ -66,13 +66,6 @@ Esto despliega:
 
 ## 💾 Base de Datos
 
-### Credenciales
-
-- **Usuario**: `kedro_user`
-- **Contraseña**: `kedro_pass`
-- **Base de datos**: `climate_db`
-- **Puerto**: `5432`
-
 ### Tablas Principales
 
 | Tabla | Descripción |
@@ -99,14 +92,6 @@ Busca la línea con `inet`. Ejemplo:
 ```
 inet 172.28.81.208/20
 ```
-
-### 2. Configurar conexión en Power BI
-
-1. Fuente de datos > PostgreSQL
-2. Servidor: `[tu_ip]:5432`
-3. Base de datos: `climate_db`
-4. Modo: Importar o DirectQuery
-5. Usuario: `kedro_user` / Contraseña: `kedro_pass`
 
 ## 📂 Estructura del Proyecto
 
