@@ -15,3 +15,6 @@ random_state: 42 # Para reproducibilidad
 # Identificador único para esta ejecución
 run_id: "run_001" # Identificador de ejecución para tracking
 
+# Parámetros específicos para el modelo de Naive Bayes
+prediction_date: null  # Si es null, se usará la fecha más reciente en los datos
+

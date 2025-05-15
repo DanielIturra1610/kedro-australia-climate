@@ -1,0 +1,1 @@
+"""Pipeline de Naive Bayes para predecir el clima de mañana basado en el clima de hoy."""

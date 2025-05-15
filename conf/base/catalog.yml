@@ -235,3 +235,36 @@ svm_metrics_pg:
   credentials: postgres_creds
   save_args:
     if_exists: append
+
+# Modelo Naive Bayes para predicción del clima
+naive_bayes_model:
+  type: pickle.PickleDataSet
+  filepath: data/06_models/naive_bayes_model.pkl
+
+naive_bayes_metrics_json:
+  type: json.JSONDataSet
+  filepath: data/08_reporting/naive_bayes_metrics.json
+
+naive_bayes_metrics_pg:
+  type: kedro_datasets.pandas.SQLTableDataSet
+  table_name: ml_metrics.classification
+  credentials: postgres_creds
+  save_args:
+    if_exists: append
+
+next_day_prediction:
+  type: pandas.ParquetDataSet
+  filepath: data/07_model_output/next_day_weather_prediction.parquet
+
+# Datasets intermedios para Naive Bayes
+X_train_naive_bayes:
+  type: MemoryDataSet
+
+X_test_naive_bayes:
+  type: MemoryDataSet
+
+y_train_naive_bayes:
+  type: MemoryDataSet
+
+y_test_naive_bayes:
+  type: MemoryDataSet
