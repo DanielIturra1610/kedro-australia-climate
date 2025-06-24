@@ -1,13 +1,13 @@
 """
 Pipeline de Naive Bayes para predecir el clima de mañana basado en el clima de hoy.
 """
-
 from kedro.pipeline import Pipeline, node, pipeline
 from .nodes import (
     prepare_data_for_naive_bayes,
     train_naive_bayes_model,
     evaluate_naive_bayes_model,
-    predict_next_day_weather
+    predict_next_day_weather,
+    predict_from_synthetic_data  # 🆕 NUEVA FUNCIÓN IMPORTADA
 )
 
 def create_pipeline(**kwargs) -> Pipeline:
@@ -41,6 +41,13 @@ def create_pipeline(**kwargs) -> Pipeline:
                 inputs=["naive_bayes_model", "weather_raw", "params:prediction_date"],
                 outputs="next_day_prediction",
                 name="predict_next_day_weather",
+            ),
+            # 🆕 NUEVO NODO PARA DATOS SINTÉTICOS
+            node(
+                func=predict_from_synthetic_data,
+                inputs="synthetic_weather_data",
+                outputs="naive_bayes_synthetic_prediction",
+                name="predict_from_synthetic_data_node",
             ),
         ]
     )

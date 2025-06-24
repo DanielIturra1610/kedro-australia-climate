@@ -18,6 +18,9 @@ run_id: "run_001" # Identificador de ejecución para tracking
 # Parámetros específicos para el modelo de Naive Bayes
 prediction_date: null  # Si es null, se usará la fecha más reciente en los datos
 
+num_days: 10
+start_date: "2025-06-25"
+
 # ─────────────────────────────────────────────
 # Parámetros para Modelos No Supervisados
 # ─────────────────────────────────────────────

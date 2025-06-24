@@ -321,3 +321,53 @@ def predict_next_day_weather(model, weather_data: pd.DataFrame, prediction_date:
     except Exception as e:
         logger.error(f"Error al realizar predicciones: {str(e)}")
         return pd.DataFrame({"error": [f"Error al realizar predicciones: {str(e)}"]})
+    
+def predict_from_synthetic_data(synthetic_data: pd.DataFrame) -> pd.DataFrame:
+    """
+    Predice si lloverá mañana usando datos sintéticos generados del día actual.
+
+    Args:
+        synthetic_data: DataFrame con datos sintéticos ya generados (1 o más días)
+
+    Returns:
+        DataFrame con la predicción
+    """
+    import joblib
+
+    model = joblib.load("data/06_models/naive_bayes_model.pkl")
+
+    # Seleccionar las columnas esperadas por el modelo
+    features = [
+        'MinTemp', 'MaxTemp', 'Rainfall', 'Evaporation', 'Sunshine',
+        'WindGustSpeed', 'WindSpeed9am', 'WindSpeed3pm', 'Humidity9am', 'Humidity3pm',
+        'Pressure9am', 'Pressure3pm', 'Cloud9am', 'Cloud3pm', 'Temp9am', 'Temp3pm',
+        'RainToday'
+    ]
+
+    # Filtrar columnas existentes
+    available_features = [col for col in features if col in synthetic_data.columns]
+    X = synthetic_data[available_features].copy()
+
+    # Preprocesamiento igual que antes
+    if 'RainToday' in X.columns:
+        X['RainToday'] = X['RainToday'].map({'Yes': 1, 'No': 0})
+
+    for col in X.columns:
+        if X[col].dtype in [np.float64, np.int64]:
+            X[col] = X[col].fillna(X[col].mean())
+        else:
+            try:
+                X[col] = pd.to_numeric(X[col], errors='coerce')
+                X[col] = X[col].fillna(X[col].mean())
+            except:
+                X = X.drop(columns=[col])
+
+    predictions = model.predict(X)
+    probabilities = model.predict_proba(X)
+
+    results = synthetic_data.copy()
+    results['RainTomorrow_Prediction'] = ['Yes' if p == 1 else 'No' for p in predictions]
+    results['RainTomorrow_Probability'] = [prob[1] for prob in probabilities]
+
+    return results
+   
