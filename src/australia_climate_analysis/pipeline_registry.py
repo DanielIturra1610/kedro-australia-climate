@@ -1,7 +1,5 @@
 # pipeline_registry.py
-
 from kedro.pipeline import Pipeline, pipeline
-
 from australia_climate_analysis.pipelines.climate_risk import pipeline as climate_risk_pl
 from australia_climate_analysis.pipelines.regression_model import pipeline as linear_pl
 from australia_climate_analysis.pipelines.regression_tree import pipeline as tree_pl
@@ -43,9 +41,7 @@ def register_pipelines() -> dict[str, Pipeline]:
     # Pipeline completo combinado
     full_pipeline = pipeline(
         data_engineering + climate_risk + regression_linear + regression_tree + regression_svm +
-        regression_random_forest + regression_multiple + naive_bayes_forecast + synthetic_data
-        data_engineering + climate_risk + regression_linear + regression_tree + regression_svm + 
-        regression_random_forest + regression_multiple + naive_bayes_forecast + 
+        regression_random_forest + regression_multiple + naive_bayes_forecast + synthetic_data +
         unsupervised_models + interpretation  # Se agregan los nuevos pipelines
     )
     
@@ -65,18 +61,8 @@ def register_pipelines() -> dict[str, Pipeline]:
         "regression_multiple": regression_multiple,
         "modelo_regresion_multiple": regression_multiple,
         "naive_bayes_forecast": naive_bayes_forecast,
-        "generate_synthetic_data": synthetic_data,  # 🆕
-        "__default__": full_pipeline,
-        "data_engineering": data_engineering,  # Pipeline ingeniería de datos
-        "regression_model": regression_linear,  # Pipeline regresión lineal
-        "regression_tree": regression_tree,  # Pipeline árbol de decisión
-        "regression_svm": regression_svm,  # Pipeline SVM
-        "regression_random_forest": regression_random_forest,  # Pipeline Random Forest
-        "regression_multiple": regression_multiple,  # Pipeline Regresión Múltiple
-        "modelo_regresion_multiple": regression_multiple,  # Alias para el mismo pipeline
-        "naive_bayes_forecast": naive_bayes_forecast,  # Pipeline de Naive Bayes para predicción del clima
-        "unsupervised_models": unsupervised_models,  # Pipeline de modelos no supervisados
-        "interpretation": interpretation,  # Pipeline de interpretación y propuestas
-        "advanced_analysis": advanced_pipeline,  # Pipeline combinado de análisis avanzado
-        "__default__": full_pipeline,  # Pipeline completo
+        "generate_synthetic_data": synthetic_data,
+        "unsupervised_models": unsupervised_models,
+        "interpretation": interpretation,
+        "advanced_analysis": advanced_pipeline,
     }
