@@ -268,3 +268,17 @@ y_train_naive_bayes:
 
 y_test_naive_bayes:
   type: MemoryDataSet
+
+synthetic_weather_data:
+  type: pandas.CSVDataSet
+  filepath: data/03_primary/synthetic_weather_data.csv
+  save_args:
+    index: False
+
+
+
+# Predicción con datos sintéticos
+naive_bayes_synthetic_prediction:
+  type: pandas.CSVDataSet
+  filepath: data/07_model_output/naive_bayes_synthetic_prediction.csv
+  layer: model_output
