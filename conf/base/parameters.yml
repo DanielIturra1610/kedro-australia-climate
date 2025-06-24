@@ -18,3 +18,31 @@ run_id: "run_001" # Identificador de ejecución para tracking
 # Parámetros específicos para el modelo de Naive Bayes
 prediction_date: null  # Si es null, se usará la fecha más reciente en los datos
 
+# ─────────────────────────────────────────────
+# Parámetros para Modelos No Supervisados
+# ─────────────────────────────────────────────
+
+# K-means clustering
+kmeans_params:
+  n_clusters: 4
+  random_state: 42 # Número de inicializaciones con diferentes centroides
+
+# DBSCAN clustering
+dbscan_params:
+  eps: 0.5
+  min_samples: 5  # Número mínimo de muestras en un vecindario para que un punto sea considerado core point
+
+# PCA dimensionality reduction
+pca_params:
+  n_components: 3  # Número de componentes principales a mantener
+
+# Isolation Forest para detección de anomalías
+isolation_forest_params:
+  contamination: 0.05  # Proporción de anomalías esperadas en los datos (5%)
+
+# ─────────────────────────────────────────────
+# Parámetros para Interpretación y Propuestas
+# ─────────────────────────────────────────────
+
+# Directorio para los reportes y visualizaciones
+interpretation_output_dir: "data/08_reporting/interpretations"

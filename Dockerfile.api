@@ -1,0 +1,23 @@
+FROM python:3.10-slim
+
+WORKDIR /home/kedro
+
+# Copiar archivos de requisitos 
+COPY src/requirements.txt ./requirements.txt
+COPY requirements-api.txt ./requirements-api.txt
+
+# Instalar dependencias
+RUN pip install --no-cache-dir -r requirements.txt && \
+    pip install --no-cache-dir -r requirements-api.txt
+
+# Copiar el código de la aplicación
+COPY . .
+
+# Puerto para la API
+EXPOSE 8000
+
+# Establecer la variable de entorno PYTHONPATH
+ENV PYTHONPATH=/home/kedro
+
+# Comando por defecto
+CMD ["uvicorn", "australia_climate_analysis.api.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]

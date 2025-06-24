@@ -1,5 +1,9 @@
 version: '3.8'
 
+networks:
+  climate_network:
+    driver: bridge
+
 services:
   kedro:
     build: .
@@ -14,6 +18,30 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
       - PYTHONDONTWRITEBYTECODE=1
+    networks:
+      - climate_network
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: climate_api
+    volumes:
+      - .:/home/kedro
+    ports:
+      - "8000:8000"  # API
+    environment:
+      - PYTHONPATH=/home/kedro/src
+      - PYTHONUNBUFFERED=1
+      - PYTHONDONTWRITEBYTECODE=1
+      - ALLOWED_ORIGINS=http://localhost:3000  # Para permitir conexiones desde el frontend
+      - DATABASE_URL=postgresql://kedro_user:kedro_pass@postgres:5432/climate_db
+    command: uvicorn src.australia_climate_analysis.api.main:app --host 0.0.0.0 --port 8000 --reload
+    depends_on:
+      - kedro
+      - postgres
+    networks:
+      - climate_network
 
   postgres:
     image: postgres:14
@@ -30,6 +58,8 @@ services:
       - ./postgres_conf/pg_hba.conf:/etc/postgresql/pg_hba.conf
     command: >
       postgres -c config_file=/etc/postgresql/postgresql.conf
+    networks:
+      - climate_network
 
 volumes:
   pgdata:

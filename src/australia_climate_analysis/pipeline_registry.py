@@ -8,6 +8,8 @@ from australia_climate_analysis.pipelines.regression_random_forest.pipeline impo
 from australia_climate_analysis.pipelines.modelo_regresion_multiple.pipeline import create_pipeline as multiple_regression_pipeline_pl  # Pipeline de Regresión Múltiple
 from australia_climate_analysis.pipelines.data_engineering.pipeline import create_pipeline as data_engineering_pipeline_pl  # Pipeline de Ingeniería de Datos
 from australia_climate_analysis.pipelines.naive_bayes_forecast.pipeline import create_pipeline as naive_bayes_pipeline_pl  # Pipeline de Naive Bayes para predicción del clima
+from australia_climate_analysis.pipelines.unsupervised_models.pipeline import create_pipeline as unsupervised_pipeline_pl  # Pipeline de modelos no supervisados
+from australia_climate_analysis.pipelines.interpretation.pipeline import create_pipeline as interpretation_pipeline_pl  # Pipeline de interpretación y propuestas
 
 def register_pipelines() -> dict[str, Pipeline]:
     # Los pipelines previos
@@ -26,11 +28,21 @@ def register_pipelines() -> dict[str, Pipeline]:
     
     # Pipeline de Naive Bayes para predicción del clima
     naive_bayes_forecast = naive_bayes_pipeline_pl()  # Pipeline de Naive Bayes
+    
+    # Nuevos pipelines: modelos no supervisados e interpretación
+    unsupervised_models = unsupervised_pipeline_pl()  # Pipeline de modelos no supervisados
+    interpretation = interpretation_pipeline_pl()  # Pipeline de interpretación y propuestas
 
     # Se crea el pipeline completo
     full_pipeline = pipeline(
         data_engineering + climate_risk + regression_linear + regression_tree + regression_svm + 
-        regression_random_forest + regression_multiple + naive_bayes_forecast  # Se combinan todos los pipelines sin duplicados
+        regression_random_forest + regression_multiple + naive_bayes_forecast + 
+        unsupervised_models + interpretation  # Se agregan los nuevos pipelines
+    )
+    
+    # Se crea un pipeline avanzado específico para análisis no supervisados e interpretación
+    advanced_pipeline = pipeline(
+        data_engineering + unsupervised_models + interpretation
     )
 
     return {
@@ -44,6 +56,8 @@ def register_pipelines() -> dict[str, Pipeline]:
         "regression_multiple": regression_multiple,  # Pipeline Regresión Múltiple
         "modelo_regresion_multiple": regression_multiple,  # Alias para el mismo pipeline
         "naive_bayes_forecast": naive_bayes_forecast,  # Pipeline de Naive Bayes para predicción del clima
+        "unsupervised_models": unsupervised_models,  # Pipeline de modelos no supervisados
+        "interpretation": interpretation,  # Pipeline de interpretación y propuestas
+        "advanced_analysis": advanced_pipeline,  # Pipeline combinado de análisis avanzado
         "__default__": full_pipeline,  # Pipeline completo
     }
-

@@ -268,3 +268,37 @@ y_train_naive_bayes:
 
 y_test_naive_bayes:
   type: MemoryDataSet
+
+# Aliases para pipeline de interpretación
+svm_metrics:
+  type: json.JSONDataSet
+  filepath: data/08_reporting/svm_metrics.json
+
+random_forest_metrics:
+  type: json.JSONDataSet
+  filepath: data/08_reporting/random_forest_metrics.json
+
+multiple_regression_metrics:
+  type: json.JSONDataSet
+  filepath: data/08_reporting/multiple_regression_metrics.json
+
+regression_linear_metrics:
+  type: json.JSONDataSet
+  filepath: data/08_reporting/regression_model_metrics.json
+
+regression_tree_metrics:
+  type: json.JSONDataSet
+  filepath: data/08_reporting/tree_model_metrics.json/2025-05-08T23.17.00.102Z/tree_model_metrics.json
+
+naive_bayes_metrics:
+  type: json.JSONDataSet
+  filepath: data/08_reporting/naive_bayes_metrics.json
+
+climate_risk_metrics:
+  type: json.JSONDataSet
+  filepath: data/08_reporting/classification_model_metrics.json
+
+# Para datos de modelos no supervisados
+unsupervised_insights:
+  type: json.JSONDataSet
+  filepath: data/07_model_output/unsupervised_insights.json
