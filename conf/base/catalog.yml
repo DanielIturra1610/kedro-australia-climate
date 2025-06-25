@@ -275,7 +275,11 @@ synthetic_weather_data:
   save_args:
     index: False
 
-
+forecast_sequences_data:
+  type: pandas.CSVDataSet
+  filepath: data/03_primary/forecast_sequences_data.csv
+  save_args:
+    index: False
 
 # Predicción con datos sintéticos
 naive_bayes_synthetic_prediction:
@@ -316,3 +320,30 @@ climate_risk_metrics:
 unsupervised_insights:
   type: json.JSONDataSet
   filepath: data/07_model_output/unsupervised_insights.json
+
+forecast_features:
+  type: kedro.extras.datasets.pandas.CSVDataSet  # Nota: CSVDataSet con S mayúscula
+  filepath: data/05_model_input/forecast_features.csv
+
+forecast_targets:
+  type: kedro.extras.datasets.pickle.PickleDataSet  # Namespace completo
+  filepath: data/05_model_input/forecast_targets.pkl
+
+forecast_model_trained:
+  type: kedro.extras.datasets.pickle.PickleDataSet  # Namespace completo
+  filepath: data/06_models/forecast_model_trained.pkl
+
+weather_forecast_api_format:
+  type: kedro.extras.datasets.json.JSONDataSet  # Namespace completo
+  filepath: data/08_reporting/weather_forecast_api_format.json
+
+weather_forecast_3days:
+  type: kedro.extras.datasets.json.JSONDataSet
+  filepath: data/08_reporting/weather_forecast_3days.json
+
+forecast_metrics:
+  type: kedro.extras.datasets.json.JSONDataSet
+  filepath: data/08_reporting/forecast_metrics.json
+
+forecast_db_result:
+  type: MemoryDataSet

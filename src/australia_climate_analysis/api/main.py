@@ -8,15 +8,40 @@ import os
 import sqlalchemy
 from sqlalchemy import create_engine, text
 from typing import List, Dict, Any, Optional
-
+from pydantic import BaseModel, Field
+from datetime import datetime, date
+from uuid import uuid4
 from .utils import (
     load_json_file, 
     get_latest_versioned_file, 
     find_visualization_files, 
     get_visualization_metadata
 )
+from .utils import format_forecast_data, create_forecast_table_if_not_exists
 
 logger = logging.getLogger(__name__)
+
+# Modelos Pydantic para la API
+class ForecastDay(BaseModel):
+    date: str
+    min_temp: float = None
+    max_temp: float = None
+    rainfall_mm: float = None
+    humidity_9am: float = None
+    humidity_3pm: float = None
+    pressure_9am: float = None
+    pressure_3pm: float = None
+    wind_speed_9am: float = None
+    wind_speed_3pm: float = None
+    rain_forecast: str = None
+
+class LocationForecast(BaseModel):
+    location: str
+    forecast_days: List[ForecastDay]
+
+class ForecastRequest(BaseModel):
+    location: Optional[str] = Field(None, description="Ubicación específica para pronóstico. Si es None, retorna todas.")
+    days: int = Field(3, description="Número de días a pronosticar (máximo 3)")
 
 # Configuración de logging
 logging.basicConfig(
@@ -81,18 +106,15 @@ def read_root():
         "status": "online",
         "version": "1.0.0",
         "endpoints": [
-            {"path": "/api/insights/unsupervised", "description": "Insights de modelos no supervisados"},
-            {"path": "/api/metrics/regression", "description": "Métricas de modelos de regresión"},
-            {"path": "/api/metrics/classification", "description": "Métricas de modelos de clasificación"},
-            {"path": "/api/metrics/model/{model_name}", "description": "Métricas de un modelo específico"},
-            {"path": "/api/visualizations", "description": "Lista de visualizaciones disponibles"},
-            {"path": "/api/visualizations/{filename}", "description": "Obtiene una visualización específica"},
-            {"path": "/api/solutions", "description": "Propuestas de solución basadas en el análisis"},
-            {"path": "/api/database/tables", "description": "Información sobre las tablas disponibles en la base de datos"},
-            {"path": "/api/database/metrics/classification", "description": "Métricas de clasificación desde la base de datos"},
-            {"path": "/api/database/metrics/regression", "description": "Métricas de regresión desde la base de datos"},
-            {"path": "/api/database/metrics/model/{model_name}", "description": "Métricas de un modelo específico desde la base de datos"},
-            {"path": "/api/database/runs", "description": "Lista de ejecuciones registradas en la base de datos"}
+            {"path": "/api/metrics", "description": "Métricas de modelos"},
+            {"path": "/api/metrics/{model_type}", "description": "Métricas filtradas por tipo de modelo"},
+            {"path": "/api/runs", "description": "Lista de ejecuciones de modelos"},
+            {"path": "/api/visualizations", "description": "Visualizaciones disponibles"},
+            {"path": "/api/visualizations/{name}", "description": "Visualización específica"},
+            {"path": "/api/forecasts/latest", "description": "Pronóstico climático más reciente"},
+            {"path": "/api/forecasts/locations", "description": "Ubicaciones disponibles para pronósticos"},
+            {"path": "/api/forecasts/generate", "description": "Generar nuevo pronóstico"},
+            {"path": "/api/forecasts/metrics", "description": "Métricas del modelo de pronóstico"}
         ]
     }
 
@@ -364,6 +386,353 @@ def get_all_runs():
     except Exception as e:
         logger.error(f"Error al obtener lista de ejecuciones: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error al consultar la base de datos: {str(e)}")
+    
+    # Endpoint para obtener el pronóstico más reciente
+@app.get("/api/forecasts/latest", tags=["forecasts"], response_model=Dict[str, Any])
+def get_latest_forecast(location: Optional[str] = None):
+    """
+    Obtiene el pronóstico climático más reciente para 3 días.
+    
+    Args:
+        location: Ubicación opcional para filtrar el pronóstico
+        
+    Returns:
+        Dict con los datos de pronóstico
+    """
+    try:
+        # Intentar cargar desde el archivo JSON generado por el pipeline
+        forecast_path = REPORTING_PATH / "weather_forecast_api_format.json"
+        
+        if not forecast_path.exists():
+            # Intentar obtener desde base de datos si el archivo no existe
+            return get_forecast_from_database(location)
+        
+        forecast_data = load_json_file(forecast_path)
+        formatted_data = format_forecast_data(forecast_data)
+        
+        # Filtrar por ubicación si se especifica
+        if location and location in formatted_data["locations"]:
+            filtered_data = formatted_data.copy()
+            filtered_data["locations"] = {location: formatted_data["locations"][location]}
+            return {"status": "success", "data": filtered_data}
+        
+        return {"status": "success", "data": formatted_data}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error al obtener pronóstico: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error al obtener pronóstico: {str(e)}")
+
+# Endpoint para obtener pronóstico desde base de datos
+def get_forecast_from_database(location: Optional[str] = None):
+    """
+    Obtiene el pronóstico climático desde la base de datos.
+    """
+    try:
+        db_url = get_database_connection_string() or DEFAULT_DB_URL
+        engine = create_database_engine(db_url)
+        
+        # Crear la tabla si no existe
+        create_forecast_table_if_not_exists(engine)
+        
+        # Consultar pronóstico más reciente
+        base_query = """
+        WITH latest_forecast AS (
+            SELECT forecast_id, MAX(generated_at) as latest_gen
+            FROM "public"."weather_forecasts"
+            GROUP BY forecast_id
+            ORDER BY latest_gen DESC
+            LIMIT 1
+        )
+        SELECT wf.* FROM "public"."weather_forecasts" wf
+        JOIN latest_forecast lf ON wf.forecast_id = lf.forecast_id
+        WHERE 1=1 
+        """
+        
+        if location:
+            base_query += " AND location = :location"
+            results = []
+            with engine.connect() as connection:
+                result = connection.execute(text(base_query), {"location": location})
+                results = [dict(row) for row in result]
+        else:
+            base_query += " ORDER BY wf.location, wf.forecast_date"
+            results = execute_query(engine, base_query)
+            
+        if not results:
+            raise HTTPException(status_code=404, detail="No se encontraron pronósticos")
+        
+        # Formatear resultados para la API
+        formatted_data = {
+            "forecast_generated_at": results[0]["generated_at"].strftime("%Y-%m-%d %H:%M:%S"),
+            "forecast_period_days": len(set(r["forecast_date"] for r in results)) if location else 3,
+            "locations": {}
+        }
+        
+        for row in results:
+            loc = row["location"]
+            if loc not in formatted_data["locations"]:
+                formatted_data["locations"][loc] = []
+                
+            formatted_data["locations"][loc].append({
+                "date": row["forecast_date"].strftime("%Y-%m-%d"),
+                "min_temp": round(row["min_temp"], 1),
+                "max_temp": round(row["max_temp"], 1),
+                "rainfall_mm": round(row["rainfall_mm"], 1),
+                "humidity_9am": round(row["humidity_9am"], 1),
+                "humidity_3pm": round(row["humidity_3pm"], 1),
+                "pressure_9am": round(row["pressure_9am"], 1),
+                "pressure_3pm": round(row["pressure_3pm"], 1),
+                "wind_speed_9am": round(row["wind_speed_9am"], 1),
+                "wind_speed_3pm": round(row["wind_speed_3pm"], 1),
+                "rain_forecast": row["rain_forecast"]
+            })
+        
+        return {"status": "success", "data": formatted_data}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error al obtener pronóstico desde base de datos: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error al obtener pronóstico desde base de datos: {str(e)}")
+
+# Endpoint para generar un nuevo pronóstico bajo demanda
+@app.post("/api/forecasts/generate", tags=["forecasts"])
+def generate_forecast(request: ForecastRequest):
+    """
+    Genera un nuevo pronóstico climático bajo demanda usando los modelos entrenados.
+    
+    Args:
+        request: Parámetros para generar el pronóstico
+        
+    Returns:
+        Dict con el pronóstico generado
+    """
+    try:
+        # Verificar límite de días
+        if request.days > 3:
+            return {"status": "error", "message": "El máximo de días a pronosticar es 3"}
+        
+        # Importar las dependencias necesarias de Kedro
+        import sys
+        import pandas as pd
+        from pathlib import Path
+        
+        # Agregar el path del proyecto para importar los módulos de Kedro
+        project_path = Path(__file__).parent.parent.parent.parent
+        sys.path.append(str(project_path / "src"))
+        
+        from australia_climate_analysis.pipelines.weather_forecast_3days.forecast_model import ForecastModel
+        from australia_climate_analysis.pipelines.weather_forecast_3days.nodes import generate_forecast as generate_forecast_node
+        
+        # Cargar el modelo entrenado
+        model_path = project_path / "data" / "06_models" / "forecast_model_trained.pkl"
+        if not model_path.exists():
+            return {"status": "error", "message": "Modelo de pronóstico no encontrado. Ejecute el pipeline primero."}
+        
+        import pickle
+        with open(model_path, 'rb') as f:
+            trained_model = pickle.load(f)
+        
+        # Cargar datos sintéticos para usar como datos iniciales
+        synthetic_data_path = project_path / "data" / "05_model_input" / "synthetic_weather_data.csv"
+        if not synthetic_data_path.exists():
+            return {"status": "error", "message": "Datos sintéticos no encontrados. Ejecute el pipeline primero."}
+        
+        synthetic_data = pd.read_csv(synthetic_data_path)
+        
+        # Filtrar por ubicación si se especifica
+        if request.location:
+            if request.location not in synthetic_data['Location'].values:
+                return {"status": "error", "message": f"Ubicación '{request.location}' no encontrada"}
+            initial_data = synthetic_data[synthetic_data['Location'] == request.location].head(1)
+        else:
+            # Usar una muestra de todas las ubicaciones
+            initial_data = synthetic_data.groupby('Location').head(1)
+        
+        # Generar pronóstico usando el nodo de Kedro
+        forecast_result = generate_forecast_node(trained_model, initial_data, request.days)
+        
+        # Formatear resultado para la API
+        forecast_data = forecast_result.get("forecast_data", [])
+        metadata = forecast_result.get("metadata", {})
+        
+        # Agrupar por ubicación
+        locations_forecast = {}
+        for prediction in forecast_data:
+            location = prediction.get("Location", "Unknown")
+            if location not in locations_forecast:
+                locations_forecast[location] = []
+            
+            # Formatear predicción
+            day_forecast = {
+                "date": prediction.get("Date", ""),
+                "min_temp": round(float(prediction.get("MinTemp", 0)), 1),
+                "max_temp": round(float(prediction.get("MaxTemp", 0)), 1),
+                "rainfall_mm": round(float(prediction.get("Rainfall", 0)), 1),
+                "humidity_9am": round(float(prediction.get("Humidity9am", 0)), 1),
+                "humidity_3pm": round(float(prediction.get("Humidity3pm", 0)), 1),
+                "pressure_9am": round(float(prediction.get("Pressure9am", 0)), 1),
+                "pressure_3pm": round(float(prediction.get("Pressure3pm", 0)), 1),
+                "wind_speed_9am": round(float(prediction.get("WindSpeed9am", 0)), 1),
+                "wind_speed_3pm": round(float(prediction.get("WindSpeed3pm", 0)), 1),
+                "rain_forecast": prediction.get("RainTomorrow", "Unknown")
+            }
+            locations_forecast[location].append(day_forecast)
+        
+        return {
+            "status": "success",
+            "data": {
+                "forecast_generated_at": metadata.get("forecast_date", datetime.now().isoformat()),
+                "forecast_period_days": request.days,
+                "model_type": "ForecastSVM",
+                "locations": locations_forecast
+            }
+        }
+        
+    except ImportError as e:
+        logger.error(f"Error importando módulos de Kedro: {str(e)}")
+        return {"status": "error", "message": "Error cargando el modelo. Verifique que el pipeline se haya ejecutado correctamente."}
+    except Exception as e:
+        logger.error(f"Error al generar pronóstico: {str(e)}")
+        return {"status": "error", "message": f"Error interno: {str(e)}"}
+
+# Endpoint para obtener métricas específicas del modelo de pronóstico
+@app.get("/api/forecasts/metrics", tags=["forecasts"])
+def get_forecast_metrics():
+    """
+    Obtiene las métricas del modelo de pronóstico meteorológico.
+    
+    Returns:
+        Dict con las métricas del modelo de pronóstico
+    """
+    try:
+        # Intentar cargar métricas desde el archivo JSON generado por el pipeline
+        metrics_path = REPORTING_PATH / "forecast_metrics.json"
+        
+        if metrics_path.exists():
+            metrics_data = load_json_file(metrics_path)
+            return {"status": "success", "data": metrics_data}
+        
+        # Si no existe el archivo, devolver métricas básicas
+        return {
+            "status": "info", 
+            "message": "Métricas de pronóstico no disponibles. Ejecute el pipeline para generar métricas.",
+            "data": {
+                "model_type": "ForecastSVM",
+                "status": "not_available"
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"Error al obtener métricas de pronóstico: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error al obtener métricas: {str(e)}")
+
+# Endpoint para obtener todas las ubicaciones disponibles
+@app.get("/api/forecasts/locations", tags=["forecasts"])
+def get_forecast_locations():
+    """
+    Obtiene la lista de ubicaciones disponibles para pronósticos.
+    
+    Returns:
+        Lista de ubicaciones disponibles
+    """
+    try:
+        # Intentar cargar desde el archivo JSON generado por el pipeline
+        forecast_path = REPORTING_PATH / "weather_forecast_api_format.json"
+        
+        if forecast_path.exists():
+            forecast_data = load_json_file(forecast_path)
+            formatted_data = format_forecast_data(forecast_data)
+            locations = list(formatted_data["locations"].keys())
+            return {"status": "success", "data": locations}
+        
+        # Intentar obtener desde base de datos si el archivo no existe
+        db_url = get_database_connection_string() or DEFAULT_DB_URL
+        engine = create_database_engine(db_url)
+        query = """
+        SELECT DISTINCT location FROM "public"."weather_forecasts"
+        ORDER BY location
+        """
+        results = execute_query(engine, query)
+        locations = [row["location"] for row in results]
+        
+        if not locations:
+            # Si no hay datos en la base de datos, cargar desde el archivo raw
+            # Esta es una opción de fallback
+            weather_raw_path = DATA_PATH / "01_raw" / "weatherAUS.csv"
+            
+            if weather_raw_path.exists():
+                import pandas as pd
+                weather_raw = pd.read_csv(weather_raw_path)
+                locations = sorted(weather_raw["Location"].unique().tolist())
+            
+        return {"status": "success", "data": locations}
+    except Exception as e:
+        logger.error(f"Error al obtener ubicaciones: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error al obtener ubicaciones: {str(e)}")
+
+# Endpoint para guardar pronóstico en la base de datos
+@app.post("/api/forecasts/save", tags=["forecasts"])
+def save_forecast_to_db(forecast_data: Dict[str, Any]):
+    """
+    Guarda un pronóstico en la base de datos.
+    Este endpoint es para uso interno del pipeline y no debería exponerse públicamente.
+    """
+    try:
+        db_url = get_database_connection_string() or DEFAULT_DB_URL
+        engine = create_database_engine(db_url)
+        
+        # Crear la tabla si no existe
+        create_forecast_table_if_not_exists(engine)
+        
+        # Formatear datos
+        formatted_data = format_forecast_data(forecast_data)
+        forecast_id = str(uuid4())
+        generated_at = datetime.now()
+        
+        # Preparar registros para insertar
+        records = []
+        for location, forecasts in formatted_data["locations"].items():
+            for forecast in forecasts:
+                record = {
+                    "forecast_id": forecast_id,
+                    "generated_at": generated_at,
+                    "location": location,
+                    "forecast_date": forecast.get("date"),
+                    "min_temp": forecast.get("min_temp"),
+                    "max_temp": forecast.get("max_temp"),
+                    "rainfall_mm": forecast.get("rainfall_mm"),
+                    "humidity_9am": forecast.get("humidity_9am"),
+                    "humidity_3pm": forecast.get("humidity_3pm"),
+                    "pressure_9am": forecast.get("pressure_9am"),
+                    "pressure_3pm": forecast.get("pressure_3pm"),
+                    "wind_speed_9am": forecast.get("wind_speed_9am"),
+                    "wind_speed_3pm": forecast.get("wind_speed_3pm"),
+                    "rain_forecast": forecast.get("rain_forecast"),
+                    "model_name": "SequentialForecastSVM"
+                }
+                records.append(record)
+        
+        # Insertar en la base de datos
+        with engine.begin() as conn:
+            for record in records:
+                insert_query = """
+                INSERT INTO "public"."weather_forecasts" (
+                    forecast_id, generated_at, location, forecast_date, min_temp, max_temp,
+                    rainfall_mm, humidity_9am, humidity_3pm, pressure_9am, pressure_3pm,
+                    wind_speed_9am, wind_speed_3pm, rain_forecast, model_name
+                ) VALUES (
+                    :forecast_id, :generated_at, :location, :forecast_date, :min_temp, :max_temp,
+                    :rainfall_mm, :humidity_9am, :humidity_3pm, :pressure_9am, :pressure_3pm,
+                    :wind_speed_9am, :wind_speed_3pm, :rain_forecast, :model_name
+                )
+                """
+                conn.execute(text(insert_query), record)
+        
+        return {"status": "success", "forecast_id": forecast_id, "records_saved": len(records)}
+    except Exception as e:
+        logger.error(f"Error al guardar pronóstico: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error al guardar pronóstico: {str(e)}")
 
 if __name__ == "__main__":
     import uvicorn

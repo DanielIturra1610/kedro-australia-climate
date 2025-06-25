@@ -3,6 +3,7 @@ import logging
 from pathlib import Path
 from typing import Dict, Any, Optional, Union, List
 from fastapi import HTTPException
+from sqlalchemy import text
 
 logger = logging.getLogger(__name__)
 
@@ -134,3 +135,86 @@ def get_visualization_metadata(vis_path: Union[str, Path]) -> Dict[str, Dict[str
         }
     
     return metadata
+
+
+def format_forecast_data(forecast_data: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Da formato a los datos de pronóstico para la API.
+    
+    Args:
+        forecast_data: Datos de pronóstico del modelo
+        
+    Returns:
+        Dict: Datos formateados con estructura consistente para la API
+    """
+    try:
+        # Verificamos que el input tenga el formato esperado
+        if not all(key in forecast_data for key in ["forecast_generated_at", "forecast_period_days", "locations"]):
+            # Si no tiene el formato esperado, intentamos darle formato
+            formatted_data = {
+                "forecast_generated_at": forecast_data.get("generated_at", "Sin fecha"),
+                "forecast_period_days": forecast_data.get("sequence_length", 3),
+                "locations": {}
+            }
+            
+            # Procesamos las ubicaciones si están disponibles en otro formato
+            if "data" in forecast_data and isinstance(forecast_data["data"], list):
+                for item in forecast_data["data"]:
+                    loc = item.get("Location")
+                    if loc:
+                        if loc not in formatted_data["locations"]:
+                            formatted_data["locations"][loc] = []
+                        formatted_data["locations"][loc].append({
+                            "date": item.get("Date"),
+                            "min_temp": round(float(item.get("MinTemp", 0)), 1),
+                            "max_temp": round(float(item.get("MaxTemp", 0)), 1),
+                            "rainfall_mm": round(float(item.get("Rainfall", 0)), 1),
+                            "humidity_9am": round(float(item.get("Humidity9am", 0)), 1),
+                            "humidity_3pm": round(float(item.get("Humidity3pm", 0)), 1),
+                            "pressure_9am": round(float(item.get("Pressure9am", 0)), 1),
+                            "pressure_3pm": round(float(item.get("Pressure3pm", 0)), 1),
+                            "wind_speed_9am": round(float(item.get("WindSpeed9am", 0)), 1),
+                            "wind_speed_3pm": round(float(item.get("WindSpeed3pm", 0)), 1),
+                            "rain_forecast": item.get("RainTomorrow", "Unknown")
+                        })
+            return formatted_data
+        return forecast_data
+    except Exception as e:
+        logger.error(f"Error al formatear datos de pronóstico: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error al formatear datos de pronóstico")
+        
+def create_forecast_table_if_not_exists(engine) -> None:
+    """
+    Crea la tabla de pronósticos climáticos si no existe.
+    
+    Args:
+        engine: Motor de conexión a la base de datos
+    """
+    try:
+        query = """
+        CREATE TABLE IF NOT EXISTS "public"."weather_forecasts" (
+            id SERIAL PRIMARY KEY,
+            forecast_id VARCHAR(50),
+            generated_at TIMESTAMP,
+            location VARCHAR(100),
+            forecast_date DATE,
+            min_temp FLOAT,
+            max_temp FLOAT,
+            rainfall_mm FLOAT,
+            humidity_9am FLOAT,
+            humidity_3pm FLOAT,
+            pressure_9am FLOAT,
+            pressure_3pm FLOAT,
+            wind_speed_9am FLOAT,
+            wind_speed_3pm FLOAT,
+            rain_forecast VARCHAR(10),
+            model_name VARCHAR(50),
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+        """
+        with engine.connect() as connection:
+            connection.execute(text(query))
+            connection.commit()
+        logger.info("Tabla de pronósticos creada o verificada correctamente")
+    except Exception as e:
+        logger.error(f"Error al crear tabla de pronósticos: {str(e)}")

@@ -49,3 +49,23 @@ isolation_forest_params:
 
 # Directorio para los reportes y visualizaciones
 interpretation_output_dir: "data/08_reporting/interpretations"
+
+
+# Parámetros para generación de datos sintéticos
+num_days: 10
+start_date: "2025-01-01"
+
+# Parámetros para generación de secuencias coherentes
+forecast_locations: null  # Si es null, usa todas las ubicaciones disponibles
+forecast_start_date: null  # Si es null, usa la fecha actual
+forecast_sequence_length: 3  # Número de días a predecir
+
+# Parámetros para modelo de pronóstico
+forecast_model:
+  kernel: "linear"  # Kernel optimizado para velocidad
+  C: 1.0  # Parámetro C optimizado para convergencia rápida
+  sample_ratio: 0.3  # Usar 30% de los datos si el dataset es grande
+  sample_threshold: 50000  # Umbral para considerar un dataset como grande
+
+database:
+  api_url: "http://localhost:8000"
